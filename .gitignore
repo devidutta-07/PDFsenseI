@@ -1,0 +1,10 @@
+PDF/
+README.md
+
+.env
+
+.vscode
+# Vector DataBase
+faiss_index
+# Image DataBase
+figures
