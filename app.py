@@ -49,7 +49,7 @@ def split_text(text):
 
 def create_vector_store(chunks):
     embeddings = GoogleGenerativeAIEmbeddings(
-        model="text-embedding-004"
+        model="gemini-embedding-2-preview"
     )
 
     vectorstore = FAISS.from_texts(
@@ -84,7 +84,7 @@ Answer:
     )
 
     embeddings = GoogleGenerativeAIEmbeddings(
-        model="text-embedding-004"
+        model="gemini-embedding-2-preview"
     )
 
     vectorstore = FAISS.load_local(
