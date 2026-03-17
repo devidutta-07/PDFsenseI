@@ -1,42 +1,38 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
+
 from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
+
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain_google_genai import (
-    GoogleGenerativeAIEmbeddings,
-    ChatGoogleGenerativeAI
-)
+from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_mistralai import ChatMistralAI
+
 from unstructured.partition.pdf import partition_pdf
 
 
 load_dotenv()
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 
-def extract_text_with_layout(files):
-    """
-    Extracts text from PDFs using OCR + layout awareness.
-    Handles scanned PDFs, tables, headings, images.
-    """
-    full_text = ""
+def extract_text(files):
+    text = ""
 
     for file in files:
         elements = partition_pdf(
             file=file,
             extract_images_in_pdf=True,
             infer_table_structure=True,
-            strategy="hi_res",   
+            strategy="hi_res"
         )
 
         for el in elements:
             if hasattr(el, "text") and el.text:
-                full_text += el.text + "\n"
+                text += el.text + "\n"
 
-    return full_text
+    return text
 
 
 def split_text(text):
@@ -48,23 +44,19 @@ def split_text(text):
 
 
 def create_vector_store(chunks):
-    embeddings = GoogleGenerativeAIEmbeddings(
-        model="gemini-embedding-2-preview"
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
 
-    vectorstore = FAISS.from_texts(
-        texts=chunks,
-        embedding=embeddings
-    )
-
+    vectorstore = FAISS.from_texts(chunks, embeddings)
     vectorstore.save_local("faiss_index")
 
-def get_retrieval_chain():
+
+def get_chain():
     prompt = PromptTemplate(
         template="""
-You are an intelligent assistant.
-Answer strictly using the provided context.
-If the answer is not present, say:
+Answer the question using only the context below.
+If the answer is not in the documents, say:
 "Answer is not available in the provided documents."
 
 Context:
@@ -78,13 +70,13 @@ Answer:
         input_variables=["context", "question"]
     )
 
-    llm = ChatGoogleGenerativeAI(
-        model="models/gemini-2.5-flash",
-        temperature=0.3
+    llm = ChatMistralAI(
+        model_name="mistral-small-latest",
+        temperature=0.3,
     )
 
-    embeddings = GoogleGenerativeAIEmbeddings(
-        model="gemini-embedding-2-preview"
+    embeddings = HuggingFaceEmbeddings(
+        model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
 
     vectorstore = FAISS.load_local(
@@ -93,15 +85,10 @@ Answer:
         allow_dangerous_deserialization=True
     )
 
-    retriever = vectorstore.as_retriever(
-        search_kwargs={"k": 5}
-    )
+    retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
 
     chain = (
-        {
-            "context": retriever,
-            "question": RunnablePassthrough()
-        }
+        {"context": retriever, "question": RunnablePassthrough()}
         | prompt
         | llm
         | StrOutputParser()
@@ -109,49 +96,40 @@ Answer:
 
     return chain
 
-def handle_user_query(question):
-    chain = get_retrieval_chain()
-    response = chain.invoke(question)
-
-    st.markdown("### 🤖 Answer")
-    st.write(response)
-
 
 def main():
-    st.set_page_config(
-        page_title="Chat with PDFs (OCR + Layout)",
-        layout="wide"
-    )
+    st.set_page_config(page_title="Chat with PDFs", layout="wide")
+    st.title("Chat with PDFs using Mistral")
 
-    st.title("📄 Chat with Multiple PDFs using Gemini (OCR Enabled)")
+    question = st.text_input("Ask something from the documents")
 
-    user_question = st.text_input(
-        "Ask a question from the uploaded documents"
-    )
+    if question:
+        chain = get_chain()
+        response = chain.invoke(question)
 
-    if user_question:
-        handle_user_query(user_question)
+        st.markdown("### Answer")
+        st.write(response)
 
     with st.sidebar:
-        st.header("📂 Upload Documents")
+        st.header("Upload PDFs")
 
         files = st.file_uploader(
-            "Upload PDF files",
-            type=["pdf"],
+            "Upload files",
+            type="pdf",
             accept_multiple_files=True
         )
 
-        if st.button("Process Documents"):
+        if st.button("Process"):
             if not files:
-                st.warning("Please upload at least one PDF.")
+                st.warning("Upload at least one PDF")
                 return
 
-            with st.spinner("Extracting text (OCR + layout)..."):
-                text = extract_text_with_layout(files)
+            with st.spinner("Processing..."):
+                text = extract_text(files)
                 chunks = split_text(text)
                 create_vector_store(chunks)
 
-            st.success("Documents indexed successfully!")
+            st.success("Documents processed")
 
 
 if __name__ == "__main__":
