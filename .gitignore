@@ -10,3 +10,5 @@ faiss_index
 figures
 
 .python-version
+uv.lock
+__pycache__

@@ -27,4 +27,5 @@ dependencies = [
     "unstructured[pdf]>=0.21.5",
     "unstructured-inference>=1.2.0",
     "pytesseract>=0.3.13",
+    "langchain-google-genai>=4.2.1",
 ]
