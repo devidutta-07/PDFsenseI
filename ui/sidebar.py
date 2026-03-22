@@ -4,33 +4,47 @@ from core.pdf_loader import extract_text
 from core.text_splitter import split_text
 from core.vector_store import create_vector_store
 
+from services.chat_manager import (
+    create_new_chat,
+    get_current_chat,
+    mark_processed
+)
+
 
 def sidebar():
 
-    st.sidebar.header("Upload PDFs")
+    st.sidebar.title("Chats")
 
-    files = st.sidebar.file_uploader(
-        "Upload files",
-        type="pdf",
-        accept_multiple_files=True
-    )
+    if st.sidebar.button("➕ New Chat"):
 
-    if st.sidebar.button("Process"):
+        create_new_chat()
 
-        if not files:
-            st.sidebar.warning("Upload at least one PDF")
-            return
+    chat_id = get_current_chat()
 
-        with st.spinner("Processing..."):
+    if chat_id:
 
-            text = extract_text(files)
+        st.sidebar.write(f"Active Chat: {chat_id[:8]}")
 
-            if not text.strip():
-                st.error("No text extracted")
+        files = st.sidebar.file_uploader(
+            "Upload PDFs",
+            type="pdf",
+            accept_multiple_files=True
+        )
+
+        if st.sidebar.button("Process PDFs"):
+
+            if not files:
+                st.sidebar.warning("Upload PDFs first")
                 return
 
-            chunks = split_text(text)
+            with st.spinner("Processing..."):
 
-            create_vector_store(chunks)
+                text = extract_text(files)
 
-            st.sidebar.success("Documents processed")
+                chunks = split_text(text)
+
+                create_vector_store(chunks, chat_id)
+
+                mark_processed()
+
+                st.sidebar.success("Documents processed")

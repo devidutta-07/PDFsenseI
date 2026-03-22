@@ -1,8 +1,17 @@
 import streamlit as st
 from dotenv import load_dotenv
 
-from core.rag_chain import get_chain
 from ui.sidebar import sidebar
+
+from services.chat_manager import (
+    init_session,
+    get_history,
+    add_message,
+    get_current_chat,
+    is_processed
+)
+
+from core.rag_chain import get_chain
 
 
 load_dotenv()
@@ -10,35 +19,48 @@ load_dotenv()
 
 def main():
 
-    st.set_page_config(
-        page_title="PDFsenseI",
-        layout="wide"
-    )
+    st.set_page_config(page_title="PDFsenseI", layout="wide")
 
-    st.title("📄 PDFsenseI - Chat with PDFs")
+    st.title("📄 PDFsenseI")
+
+    init_session()
 
     sidebar()
 
-    question = st.text_input(
-        "Ask something from the documents"
-    )
+    chat_id = get_current_chat()
+
+    if not chat_id:
+        st.info("Create a new chat from sidebar")
+        return
+
+    if not is_processed():
+        st.warning("Upload and process PDFs first")
+        return
+
+    history = get_history()
+
+    for msg in history:
+
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
+
+    question = st.chat_input("Ask about the document")
 
     if question:
 
-        try:
-            chain = get_chain()
+        add_message("user", question)
 
-            response = chain.invoke(question)
+        with st.chat_message("user"):
+            st.write(question)
 
-            st.markdown("### Answer")
+        chain = get_chain(chat_id)
 
-            st.write(response)
+        answer = chain.invoke(question)
 
-        except Exception:
+        add_message("assistant", answer)
 
-            st.error(
-                "Documents not processed yet. Upload PDFs first."
-            )
+        with st.chat_message("assistant"):
+            st.write(answer)
 
 
 if __name__ == "__main__":
