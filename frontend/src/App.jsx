@@ -1,8 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 
-/* ─────────────────────────────────────────────────
-   GLOBAL STYLES
-───────────────────────────────────────────────────*/
+
 const GlobalStyles = () => (
   <style>{`
     @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
@@ -738,7 +736,7 @@ const LoginPage = ({ onLogin, onGoSignup }) => {
         <FG label="Email address" error={errs.email}>
           <div style={{ position:"relative" }}>
             <div style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", pointerEvents:"none", color:"var(--text-3)" }}><Icon n="mail" size={15}/></div>
-            <input className="field" name="email" type="email" value={form.email} onChange={ch} placeholder="you@company.com" style={{ paddingLeft:38 }}/>
+            <input className="field" name="email" type="email" value={form.email} onChange={ch} style={{ paddingLeft:38 }}/>
           </div>
         </FG>
         <FG label="Password" error={errs.password}>
