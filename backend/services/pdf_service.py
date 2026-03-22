@@ -2,17 +2,20 @@ from unstructured.partition.pdf import partition_pdf
 
 
 def extract_text(files):
+
     text = ""
 
     for file in files:
+
         elements = partition_pdf(
-            file=file,
+            filename=file,
             extract_images_in_pdf=True,
-            infer_table_structure=True,
-            strategy="hi_res"
+            strategy="hi_res",
+            infer_table_structure=True
         )
 
         for el in elements:
+
             if hasattr(el, "text") and el.text:
                 text += el.text + "\n"
 
