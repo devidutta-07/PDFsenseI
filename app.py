@@ -44,6 +44,9 @@ def split_text(text):
 
 
 def create_vector_store(chunks):
+    if not chunks or len(chunks) == 0:
+        raise ValueError("No text chunks provided. Ensure PDFs contain extractable text.")
+    
     embeddings = HuggingFaceEmbeddings(
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
@@ -79,11 +82,14 @@ Answer:
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
 
-    vectorstore = FAISS.load_local(
-        "faiss_index",
-        embeddings,
-        allow_dangerous_deserialization=True
-    )
+    try:
+        vectorstore = FAISS.load_local(
+            "faiss_index",
+            embeddings,
+            allow_dangerous_deserialization=True
+        )
+    except Exception as e:
+        raise RuntimeError("No documents have been processed yet. Please upload and process PDFs first.")
 
     retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
 
@@ -104,11 +110,14 @@ def main():
     question = st.text_input("Ask something from the documents")
 
     if question:
-        chain = get_chain()
-        response = chain.invoke(question)
+        try:
+            chain = get_chain()
+            response = chain.invoke(question)
 
-        st.markdown("### Answer")
-        st.write(response)
+            st.markdown("### Answer")
+            st.write(response)
+        except RuntimeError as e:
+            st.error(str(e))
 
     with st.sidebar:
         st.header("Upload PDFs")
@@ -125,11 +134,17 @@ def main():
                 return
 
             with st.spinner("Processing..."):
-                text = extract_text(files)
-                chunks = split_text(text)
-                create_vector_store(chunks)
-
-            st.success("Documents processed")
+                try:
+                    text = extract_text(files)
+                    if not text or text.strip() == "":
+                        st.error("No text could be extracted from the PDFs. Try different files.")
+                        return
+                    
+                    chunks = split_text(text)
+                    create_vector_store(chunks)
+                    st.success("Documents processed")
+                except Exception as e:
+                    st.error(f"Error processing documents: {str(e)}")
 
 
 if __name__ == "__main__":
