@@ -1369,7 +1369,12 @@ const AppShell = ({ user, onLogout, theme, onToggle }) => {
 
   const addFiles = (incoming) => {
     const pdfs=incoming.filter(f=>f.type==="application/pdf"||f.name.endsWith(".pdf"));
-    setFiles(prev=>{const names=new Set(prev.map(f=>f.name));return [...prev,...pdfs.filter(f=>!names.has(f.name))];});
+    setFiles(prev=>{
+      const names=new Set(prev.map(f=>f.name));
+      const newFiles=pdfs.filter(f=>!names.has(f.name));
+      if (newFiles.length > 0) setProcessed(false);
+      return [...prev,...newFiles];
+    });
   };
   const handleDrop = useCallback(e=>{ e.preventDefault(); setIsDragging(false); addFiles(Array.from(e.dataTransfer.files)); },[]);
 
@@ -1402,6 +1407,9 @@ const AppShell = ({ user, onLogout, theme, onToggle }) => {
   };
 
   const newSession = async ()=>{ 
+    if (chatId) {
+      try { await fetch(`http://localhost:5000/chat/delete/${chatId}`, { method: "DELETE" }); } catch(e){}
+    }
     setMessages([]); setFiles([]); setProcessed(false); setProcessing(false); setInput(""); 
     try {
       const r = await fetch("http://localhost:5000/chat/create", { method: "POST" });
@@ -1416,6 +1424,17 @@ const AppShell = ({ user, onLogout, theme, onToggle }) => {
   useEffect(() => {
     newSession();
   }, []);
+
+  // Delete chat on window unload
+  useEffect(() => {
+    const handleUnload = () => {
+      if (chatId) {
+        navigator.sendBeacon(`http://localhost:5000/chat/delete/${chatId}`);
+      }
+    };
+    window.addEventListener("beforeunload", handleUnload);
+    return () => window.removeEventListener("beforeunload", handleUnload);
+  }, [chatId]);
 
   return (
     <TooltipProvider>
