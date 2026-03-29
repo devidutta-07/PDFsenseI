@@ -3,7 +3,7 @@ import os
 from langchain_community.vectorstores import FAISS
 from vectorstore.embeddings import get_embeddings
 
-BASE_PATH = "backend/data/chats"
+BASE_PATH = "backend/data/embeddings"
 
 
 def create_index(chunks, chat_id):
