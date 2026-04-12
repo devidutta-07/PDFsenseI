@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { supabase } from "./supabaseClient";
 
 
 const GlobalStyles = () => (
@@ -710,6 +711,7 @@ const LoginPage = ({ onLogin, onGoSignup }) => {
   const [form, setForm]     = useState({ email:"", password:"" });
   const [errs, setErrs]     = useState({});
   const [loading, setLoading] = useState(false);
+  const [authErr, setAuthErr] = useState("");
 
   const validate = () => {
     const e={};
@@ -718,13 +720,36 @@ const LoginPage = ({ onLogin, onGoSignup }) => {
     if(!form.password) e.password="Password is required";
     return e;
   };
+
   const submit = async (ev) => {
     ev.preventDefault();
+    setAuthErr("");
     const e=validate(); if(Object.keys(e).length){setErrs(e);return;}
-    setLoading(true); await new Promise(r=>setTimeout(r,900)); setLoading(false);
-    onLogin({ name:form.email.split("@")[0], email:form.email });
+    setLoading(true);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: form.email,
+      password: form.password,
+    });
+    setLoading(false);
+    if (error) { setAuthErr(error.message); return; }
+    const u = data.user;
+    onLogin({
+      name: u.user_metadata?.full_name || u.email.split("@")[0],
+      email: u.email,
+      id: u.id,
+    });
   };
-  const ch = ev => { setForm(p=>({...p,[ev.target.name]:ev.target.value})); setErrs(p=>({...p,[ev.target.name]:undefined})); };
+
+  const loginGoogle = async () => {
+    setAuthErr("");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) setAuthErr(error.message);
+  };
+
+  const ch = ev => { setForm(p=>({...p,[ev.target.name]:ev.target.value})); setErrs(p=>({...p,[ev.target.name]:undefined})); setAuthErr(""); };
 
   return (
     <AuthLayout>
@@ -732,11 +757,16 @@ const LoginPage = ({ onLogin, onGoSignup }) => {
         <h1 style={{ fontFamily:"var(--fd)", fontSize:26, fontWeight:600, letterSpacing:"-.03em" }}>Welcome back</h1>
         <p style={{ fontSize:14, color:"var(--text-2)", marginTop:6 }}>Sign in to continue to your workspace</p>
       </div>
+      {authErr && (
+        <div className="sd" style={{ display:"flex", alignItems:"center", gap:7, padding:"10px 14px", background:"rgba(242,103,103,.08)", border:"1px solid rgba(242,103,103,.22)", borderRadius:"var(--r)", fontSize:13, color:"var(--danger)", marginBottom:12 }}>
+          <Icon n="info" size={14} color="var(--danger)"/>{authErr}
+        </div>
+      )}
       <form onSubmit={submit} style={{ display:"flex", flexDirection:"column", gap:16 }}>
         <FG label="Email address" error={errs.email}>
           <div style={{ position:"relative" }}>
             <div style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)", pointerEvents:"none", color:"var(--text-3)" }}><Icon n="mail" size={15}/></div>
-            <input className="field" name="email" type="email" value={form.email} onChange={ch} style={{ paddingLeft:38 }}/>
+            <input className="field" name="email" type="email" value={form.email} onChange={ch} placeholder="you@email.com" style={{ paddingLeft:38 }}/>
           </div>
         </FG>
         <FG label="Password" error={errs.password}>
@@ -749,18 +779,14 @@ const LoginPage = ({ onLogin, onGoSignup }) => {
           {loading ? <><Icon n="spin" size={16} color="#fff"/> Signing in…</> : "Sign in"}
         </button>
         <Separator label="or continue with"/>
-        <button type="button" className="bs" style={{ width:"100%", padding:11 }}><Icon n="google" size={16}/> Sign in with Google</button>
+        <button type="button" className="bs" style={{ width:"100%", padding:11 }} onClick={loginGoogle}>
+          <Icon n="google" size={16}/> Sign in with Google
+        </button>
       </form>
       <p style={{ marginTop:24, textAlign:"center", fontSize:13, color:"var(--text-2)" }}>
         Don't have an account?{" "}
         <button type="button" className="link-inline" onClick={onGoSignup}>Create one <em className="li-arrow">↗</em></button>
       </p>
-      <div style={{ marginTop:16, textAlign:"center" }}>
-        <button type="button" className="link-skip" onClick={()=>onLogin({name:"Guest",email:"guest@demo.com"})}>
-          <em className="skip-arrow">→</em>
-          Skip for now
-        </button>
-      </div>
     </AuthLayout>
   );
 };
@@ -771,6 +797,7 @@ const SignupPage = ({ onSignup, onGoLogin }) => {
   const [errs, setErrs]     = useState({});
   const [loading, setLoading] = useState(false);
   const [done, setDone]     = useState(false);
+  const [authErr, setAuthErr] = useState("");
 
   const validate = () => {
     const e={};
@@ -784,11 +811,27 @@ const SignupPage = ({ onSignup, onGoLogin }) => {
   };
   const submit = async (ev) => {
     ev.preventDefault();
+    setAuthErr("");
     const e=validate(); if(Object.keys(e).length){setErrs(e);return;}
-    setLoading(true); await new Promise(r=>setTimeout(r,1000)); setLoading(false);
-    setDone(true); setTimeout(()=>onSignup({name:form.name,email:form.email}),1100);
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+      options: { data: { full_name: form.name.trim() } },
+    });
+    setLoading(false);
+    if (error) { setAuthErr(error.message); return; }
+    setDone(true);
   };
-  const ch = ev => { setForm(p=>({...p,[ev.target.name]:ev.target.value})); setErrs(p=>({...p,[ev.target.name]:undefined})); };
+  const loginGoogle = async () => {
+    setAuthErr("");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) setAuthErr(error.message);
+  };
+  const ch = ev => { setForm(p=>({...p,[ev.target.name]:ev.target.value})); setErrs(p=>({...p,[ev.target.name]:undefined})); setAuthErr(""); };
 
   const strength=(()=>{const p=form.password;if(!p)return 0;let s=0;if(p.length>=8)s++;if(/[A-Z]/.test(p))s++;if(/[0-9]/.test(p))s++;if(/[^A-Za-z0-9]/.test(p))s++;return s;})();
   const sLabel=["","Weak","Fair","Good","Strong"][strength];
@@ -800,11 +843,11 @@ const SignupPage = ({ onSignup, onGoLogin }) => {
         <div style={{ width:56, height:56, borderRadius:"50%", background:"rgba(62,207,142,.12)", border:"1px solid rgba(62,207,142,.3)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 18px" }}>
           <Icon n="check" size={26} color="var(--success)"/>
         </div>
-        <h2 style={{ fontFamily:"var(--fd)", fontSize:22, fontWeight:600, letterSpacing:"-.02em" }}>Account created</h2>
-        <p style={{ fontSize:14, color:"var(--text-2)", marginTop:8 }}>Signing you in…</p>
+        <h2 style={{ fontFamily:"var(--fd)", fontSize:22, fontWeight:600, letterSpacing:"-.02em" }}>Check your email!</h2>
+        <p style={{ fontSize:14, color:"var(--text-2)", marginTop:8 }}>We sent a confirmation link to <strong>{form.email}</strong>. Click it to activate your account.</p>
         <p style={{ marginTop:20, fontSize:13, color:"var(--text-3)" }}>
-          Not redirecting?{" "}
-          <button type="button" className="link-inline" onClick={onGoLogin}>Back to sign in <em className="li-arrow">↗</em></button>
+          Already confirmed?{" "}
+          <button type="button" className="link-inline" onClick={onGoLogin}>Sign in <em className="li-arrow">↗</em></button>
         </p>
       </div>
     </AuthLayout>
@@ -846,11 +889,18 @@ const SignupPage = ({ onSignup, onGoLogin }) => {
         <FG label="Confirm password" error={errs.confirm}>
           <PF name="confirm" value={form.confirm} onChange={ch} placeholder="Repeat password"/>
         </FG>
+        {authErr && (
+          <div className="sd" style={{ display:"flex", alignItems:"center", gap:7, padding:"10px 14px", background:"rgba(242,103,103,.08)", border:"1px solid rgba(242,103,103,.22)", borderRadius:"var(--r)", fontSize:13, color:"var(--danger)" }}>
+            <Icon n="info" size={14} color="var(--danger)"/>{authErr}
+          </div>
+        )}
         <button type="submit" className="bp" style={{ width:"100%", padding:12, marginTop:4 }} disabled={loading}>
           {loading ? <><Icon n="spin" size={16} color="#fff"/> Creating account…</> : "Create account"}
         </button>
         <Separator label="or"/>
-        <button type="button" className="bs" style={{ width:"100%", padding:11 }}><Icon n="google" size={16}/> Sign up with Google</button>
+        <button type="button" className="bs" style={{ width:"100%", padding:11 }} onClick={loginGoogle}>
+          <Icon n="google" size={16}/> Sign up with Google
+        </button>
       </form>
       <p style={{ marginTop:18, textAlign:"center", fontSize:12, color:"var(--text-3)", lineHeight:1.65 }}>
         By creating an account you agree to our <span style={{ color:"var(--accent)", cursor:"pointer" }}>Terms of Service</span> and <span style={{ color:"var(--accent)", cursor:"pointer" }}>Privacy Policy</span>.
@@ -859,12 +909,6 @@ const SignupPage = ({ onSignup, onGoLogin }) => {
         Already have an account?{" "}
         <button type="button" className="link-inline" onClick={onGoLogin}>Sign in <em className="li-arrow">↗</em></button>
       </p>
-      <div style={{ marginTop:12, textAlign:"center" }}>
-        <button type="button" className="link-skip" onClick={()=>onSignup({name:"Guest",email:"guest@demo.com"})}>
-          <em className="skip-arrow">→</em>
-          Skip for now
-        </button>
-      </div>
     </AuthLayout>
   );
 };
@@ -1734,11 +1778,75 @@ const AppShell = ({ user, onLogout, theme, onToggle }) => {
 
 /* ── Root ──────────────────────────────────────── */
 export default function App() {
-  const [page,  setPage]  = useState("login");
+  const [page,  setPage]  = useState("loading"); // start as loading until session resolved
   const [user,  setUser]  = useState(null);
   const [theme, setTheme] = useState("dark");
-  const login  = u=>{ setUser(u); setPage("app"); };
-  const logout = ()=>{ setUser(null); setPage("login"); };
+
+  // ── Supabase session bootstrap ──────────────────
+  useEffect(() => {
+    // Check existing session on first load (also handles Google OAuth redirect)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const u = session.user;
+        setUser({
+          name:  u.user_metadata?.full_name || u.email.split("@")[0],
+          email: u.email,
+          id:    u.id,
+        });
+        setPage("app");
+      } else {
+        setPage("login");
+      }
+    });
+
+    // Listen for future sign-in / sign-out events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        const u = session.user;
+        setUser({
+          name:  u.user_metadata?.full_name || u.email.split("@")[0],
+          email: u.email,
+          id:    u.id,
+        });
+        setPage("app");
+      } else {
+        setUser(null);
+        setPage("login");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const login  = u => { setUser(u); setPage("app"); };
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setPage("login");
+  };
+
+  // ── Loading screen (while Supabase resolves session) ──
+  if (page === "loading") return (
+    <div style={{ height:"100%", display:"flex", alignItems:"center", justifyContent:"center", background:"#09090e" }}>
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:20 }}>
+        {/* Logo badge */}
+        <div style={{ width:48, height:48, borderRadius:12, background:"#5b7cf6", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 0 8px rgba(91,124,246,0.12)" }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/>
+            <polyline points="13 2 13 9 20 9"/>
+            <circle cx="10" cy="15" r="2.5"/>
+            <line x1="12" y1="17" x2="14.5" y2="19.5"/>
+          </svg>
+        </div>
+        {/* Spinner */}
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" strokeLinecap="round" style={{ animation:"spin .8s linear infinite" }}>
+          <circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.08)" strokeWidth="2"/>
+          <path d="M21 12a9 9 0 00-9-9" stroke="#5b7cf6" strokeWidth="2"/>
+        </svg>
+        <span style={{ fontFamily:"'DM Sans',sans-serif", fontSize:13, color:"rgba(237,237,242,0.35)", letterSpacing:".02em" }}>Loading PDFSensei…</span>
+      </div>
+    </div>
+  );
+
   return (
     <div className={theme} style={{ height:"100%", background:"var(--bg)" }}>
       <GlobalStyles/>
