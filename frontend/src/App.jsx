@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "./supabaseClient";
 
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:10000";
 
 const GlobalStyles = () => (
   <style>{`
@@ -1431,7 +1432,7 @@ const AppShell = ({ user, onLogout, theme, onToggle }) => {
     const fd=new FormData(); files.forEach(f=>fd.append("files",f));
     fd.append("chat_id", chatId);
     try {
-      const r=await fetch("http://localhost:5000/process",{method:"POST",body:fd});
+      const r=await fetch(`${API_URL}/api/doc/process`,{method:"POST",body:fd});
       const d=await r.json();
       if(d.status==="ok"){ setProcessed(true); push("assistant",`${files.length} document${files.length>1?"s":""} indexed across ${d.chunk_count??"—"} chunks. What would you like to know?`); }
       else push("assistant",`Indexing failed: ${d.message}`);
@@ -1443,7 +1444,7 @@ const AppShell = ({ user, onLogout, theme, onToggle }) => {
     q=(q||input).trim(); if(!q||isTyping||!chatId) return;
     setInput(""); push("user",q); setIsTyping(true);
     try {
-      const r=await fetch("http://localhost:5000/ask",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q, chat_id:chatId})});
+      const r=await fetch(`${API_URL}/api/qa/ask`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q, chat_id:chatId})});
       const d=await r.json();
       push("assistant",d.answer||"No answer returned.");
     } catch { push("assistant","Backend is not reachable. Please start the Flask server on port 5000."); }
@@ -1452,11 +1453,11 @@ const AppShell = ({ user, onLogout, theme, onToggle }) => {
 
   const newSession = async ()=>{ 
     if (chatId) {
-      try { await fetch(`http://localhost:5000/chat/delete/${chatId}`, { method: "DELETE" }); } catch(e){}
+      try { await fetch(`${API_URL}/api/chat/delete/${chatId}`, { method: "DELETE" }); } catch(e){}
     }
     setMessages([]); setFiles([]); setProcessed(false); setProcessing(false); setInput(""); 
     try {
-      const r = await fetch("http://localhost:5000/chat/create", { method: "POST" });
+      const r = await fetch(`${API_URL}/api/chat/create`, { method: "POST" });
       const d = await r.json();
       setChatId(d.chat_id);
     } catch (e) {
@@ -1473,7 +1474,7 @@ const AppShell = ({ user, onLogout, theme, onToggle }) => {
   useEffect(() => {
     const handleUnload = () => {
       if (chatId) {
-        navigator.sendBeacon(`http://localhost:5000/chat/delete/${chatId}`);
+        navigator.sendBeacon(`${API_URL}/api/chat/delete/${chatId}`);
       }
     };
     window.addEventListener("beforeunload", handleUnload);
