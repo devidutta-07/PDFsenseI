@@ -7,11 +7,7 @@ requests
 # Document processing
 unstructured[pdf]
 
-# OCR and Image Processing (Used by unstructured's hi_res strategy)
-unstructured-inference
-pytesseract
-pdf2image
-pillow
+# OCR features disabled
 
 # GenAI and Vector store
 langchain-core

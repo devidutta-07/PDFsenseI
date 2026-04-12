@@ -9,9 +9,7 @@ def extract_text(files):
 
         elements = partition_pdf(
             filename=file,
-            extract_images_in_pdf=True,
-            strategy="hi_res",
-            infer_table_structure=True
+            strategy="fast"
         )
 
         for el in elements:
