@@ -1,20 +1,12 @@
-from unstructured.partition.pdf import partition_pdf
-
+import PyPDF2
 
 def extract_text(files):
-
     text = ""
-
-    for file in files:
-
-        elements = partition_pdf(
-            filename=file,
-            strategy="fast"
-        )
-
-        for el in elements:
-
-            if hasattr(el, "text") and el.text:
-                text += el.text + "\n"
-
+    for file_path in files:
+        with open(file_path, "rb") as f:
+            reader = PyPDF2.PdfReader(f)
+            for page in reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
     return text

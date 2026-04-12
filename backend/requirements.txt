@@ -5,7 +5,7 @@ python-dotenv
 requests
 
 # Document processing
-unstructured[pdf]
+PyPDF2
 
 # OCR features disabled
 

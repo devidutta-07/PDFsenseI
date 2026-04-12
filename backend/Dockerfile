@@ -4,19 +4,6 @@ FROM python:3.10-slim
 # Install ALL required system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
-    tesseract-ocr \
-    poppler-utils \
-    libgl1 \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    libxcb1 \
-    libx11-6 \
-    libx11-xcb1 \
-    libxcb-render0 \
-    libxcb-shm0 \
-    libxcb-xfixes0 \
     && apt-get clean
 
 # Set working directory
