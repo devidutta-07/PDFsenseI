@@ -2,7 +2,7 @@ import os
 import uuid
 import shutil
 
-BASE_PATH = "backend/data/chats"
+BASE_PATH = "DATA"
 
 
 def create_chat():

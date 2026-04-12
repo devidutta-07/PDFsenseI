@@ -1,5 +1,5 @@
 from flask import Blueprint, jsonify
-from backend.services.chat_manager import create_chat, delete_chat, list_chats
+from services.chat_manager import create_chat, delete_chat, list_chats
 
 chat_bp = Blueprint("chat", __name__)
 
